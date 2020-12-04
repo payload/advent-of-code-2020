@@ -44,23 +44,52 @@ fn day1_2() -> std::io::Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+struct PasswordEntry(usize, usize, char, String);
+
 fn day2() -> Result<(), Box<dyn std::error::Error>> {
     let filepath = "src/passwords.input";
     let regex = Regex::new(r"(\d+)-(\d+) ([a-z]): (\w+)")?;
-    let hits = fs::read_to_string(&filepath)?
+    let entries: Vec<_> = fs::read_to_string(&filepath)?
         .split('\n')
-        .filter(|s| {
-            if let Some(caps) = regex.captures(s) {
-                let min: usize = caps.get(1).unwrap().as_str().parse().unwrap();
-                let max: usize = caps.get(2).unwrap().as_str().parse().unwrap();
-                let letter = caps.get(3).unwrap().as_str().chars().nth(0).unwrap();
-                let password = caps.get(4).unwrap().as_str();
-                let char_count = password.chars().filter(|&c| letter == c).count();
-                return min <= char_count && char_count <= max;
-            }
-            false
+        .map(|line| {
+            regex.captures(line).map(|caps| {
+                PasswordEntry(
+                    caps.get(1).unwrap().as_str().parse().unwrap(),
+                    caps.get(2).unwrap().as_str().parse().unwrap(),
+                    caps.get(3).unwrap().as_str().chars().nth(0).unwrap(),
+                    caps.get(4).unwrap().as_str().to_string(),
+                )
+            })
+        })
+        .filter_map(|o| o)
+        .collect();
+
+    let part1_hits = entries
+        .iter()
+        .filter(|PasswordEntry(min, max, letter, password)| {
+            let char_count = &password.chars().filter(|c| letter == c).count();
+            return min <= char_count && char_count <= max;
         })
         .count();
-    println!("day2: {}", hits);
+
+    let part2_hits: Vec<_> = entries
+        .iter()
+        .filter(|&e| day2_2_check(e.clone()))
+        .collect();
+    println!("day 2 part 1: {}", part1_hits);
+    println!("day 2 part 2: {}", part2_hits.len());
     Ok(())
+}
+
+fn day2_2_check(PasswordEntry(pos1, pos2, letter, password): PasswordEntry) -> bool {
+    let at1 = password.chars().nth(pos1 - 1) == Some(letter);
+    let at2 = password.chars().nth(pos2 - 1) == Some(letter);
+    (at1 && !at2) || (!at1 && at2)
+}
+
+#[test]
+fn day2_2() {
+    let password = "ddddmldddzddgnk".into();
+    assert!(!day2_2_check(PasswordEntry(10, 15, 'd', password)));
 }
