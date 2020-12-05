@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     day1_1()?;
     day1_2()?;
     day2()?;
+    day3()?;
     Ok(())
 }
 
@@ -92,4 +93,28 @@ fn day2_2_check(PasswordEntry(pos1, pos2, letter, password): PasswordEntry) -> b
 fn day2_2() {
     let password = "ddddmldddzddgnk".into();
     assert!(!day2_2_check(PasswordEntry(10, 15, 'd', password)));
+}
+
+fn day3() -> Result<(), Box<dyn std::error::Error>> {
+    let filepath = "src/forest.input";
+    let trees = day3_count_trees(&fs::read_to_string(&filepath)?);
+    println!("day 3 part 1: {}", trees);
+    Ok(())
+}
+
+fn day3_count_trees(input: &str) -> usize {
+    let map: Vec<char> = input.chars().collect();
+    let width = map.iter().position(|&c| c == '\n').unwrap();
+    let height = map.len() / (width + 1);
+    (1..height)
+        .filter(|row| {
+            let col = (row * 3) % width;
+            map[row * (width + 1) + col] == '#'
+        })
+        .count()
+}
+
+#[test]
+fn day3_1() {
+    assert_eq!(3, day3_count_trees("....\n...#\n##.#\n.#..\n#...\n"));
 }
