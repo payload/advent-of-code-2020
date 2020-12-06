@@ -244,7 +244,7 @@ fn is_height(s: &str, unit: &str, min: usize, max: usize) -> bool {
 }
 
 fn is_colorcode(s: &str) -> bool {
-    s.starts_with("#") && s[1..].chars().all(|c| c.is_digit(16))
+    s.starts_with('#') && s[1..].chars().all(|c| c.is_digit(16))
 }
 
 #[test]
@@ -291,13 +291,22 @@ fn day4_valid_passports() {
 fn day5() -> Result<(), Box<dyn Error>> {
     let filepath = "src/boardingpasses.input";
     let content = fs::read_to_string(&filepath)?;
-    let max = content
+    let seats: Vec<_> = content
         .lines()
         .filter_map(parse_boardingpass)
-        .map(|(id, _row, _coll)| id)
-        .max()
-        .expect("expect at least one entry");
-    println!("day 5 part 1: {}", max);
+        .map(|(id, _, _)| id)
+        .collect();
+    let max = seats.iter().max();
+    println!("day 5 part 1: {:?}", max);
+
+    let mut seats = seats.clone();
+    seats.sort_unstable();
+    let gaps: Vec<_> = seats
+        .iter()
+        .zip(&seats[1..])
+        .filter(|(&a, &b)| b - a > 1)
+        .collect();
+    println!("day 5 part 2: {:?}", gaps);
     Ok(())
 }
 
