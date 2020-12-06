@@ -2,7 +2,7 @@
 #![feature(or_patterns)]
 
 use regex::{self, Regex};
-use std::{error::Error, fs};
+use std::{collections::HashSet, error::Error, fs};
 
 fn main() -> Result<(), Box<dyn Error>> {
     day1_1()?;
@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     day3()?;
     day4()?;
     day5()?;
+    day6()?;
     Ok(())
 }
 
@@ -63,7 +64,7 @@ fn day2() -> Result<(), Box<dyn Error>> {
                 PasswordEntry(
                     caps.get(1).unwrap().as_str().parse().unwrap(),
                     caps.get(2).unwrap().as_str().parse().unwrap(),
-                    caps.get(3).unwrap().as_str().chars().nth(0).unwrap(),
+                    caps.get(3).unwrap().as_str().chars().next().unwrap(),
                     caps.get(4).unwrap().as_str().to_string(),
                 )
             })
@@ -75,7 +76,7 @@ fn day2() -> Result<(), Box<dyn Error>> {
         .iter()
         .filter(|PasswordEntry(min, max, letter, password)| {
             let char_count = &password.chars().filter(|c| letter == c).count();
-            return min <= char_count && char_count <= max;
+            min <= char_count && char_count <= max
         })
         .count();
 
@@ -225,7 +226,7 @@ fn field_is_valid(field: &(&str, &str)) -> bool {
 fn has_mandatory_fields(entry: &[(&str, &str)]) -> bool {
     ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"]
         .iter()
-        .all(|mandatory| entry.iter().find(|(key, _)| mandatory == key).is_some())
+        .all(|mandatory| entry.iter().any(|(key, _)| mandatory == key))
 }
 
 fn is_year(s: &str, min: usize, max: usize) -> bool {
@@ -348,4 +349,20 @@ fn binpart(space: usize, lo: char, hi: char, instructions: &str) -> usize {
 fn day5_binpart() {
     assert_eq!(44, binpart(128, 'F', 'B', "FBFBBFF"));
     assert_eq!(5, binpart(8, 'L', 'R', "RLR"));
+}
+
+fn day6() -> Result<(), Box<dyn Error>> {
+    let filepath = "src/customs.input";
+    let content = fs::read_to_string(&filepath)?;
+    let sum: usize = content.split("\n\n").map(count_yes).sum();
+    println!("day 6 part 1: {}", sum);
+    Ok(())
+}
+
+fn count_yes(group: &str) -> usize {
+    group
+        .chars()
+        .filter(char::is_ascii_lowercase)
+        .collect::<HashSet<_>>()
+        .len()
 }
