@@ -2,14 +2,15 @@
 #![feature(or_patterns)]
 
 use regex::{self, Regex};
-use std::fs;
+use std::{error::Error, fs};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     day1_1()?;
     day1_2()?;
     day2()?;
     day3()?;
     day4()?;
+    day5()?;
     Ok(())
 }
 
@@ -52,7 +53,7 @@ fn day1_2() -> std::io::Result<()> {
 #[derive(Debug, Clone)]
 struct PasswordEntry(usize, usize, char, String);
 
-fn day2() -> Result<(), Box<dyn std::error::Error>> {
+fn day2() -> Result<(), Box<dyn Error>> {
     let filepath = "src/passwords.input";
     let regex = Regex::new(r"(\d+)-(\d+) ([a-z]): (\w+)")?;
     let entries: Vec<_> = fs::read_to_string(&filepath)?
@@ -99,7 +100,7 @@ fn day2_2() {
     assert!(!day2_2_check(PasswordEntry(10, 15, 'd', password)));
 }
 
-fn day3() -> Result<(), Box<dyn std::error::Error>> {
+fn day3() -> Result<(), Box<dyn Error>> {
     let filepath = "src/forest.input";
     let map = fs::read_to_string(&filepath)?.trim().to_string();
     let trees = day3_count_trees(&map, 3, 1);
@@ -162,7 +163,7 @@ fn day3_2() {
     assert_eq!(2, day3_count_trees(&map, 1, 2));
 }
 
-fn day4() -> Result<(), Box<dyn std::error::Error>> {
+fn day4() -> Result<(), Box<dyn Error>> {
     let filepath = "src/passports.input";
     let content = fs::read_to_string(&filepath)?;
     let entries = parse_passports(&content);
@@ -285,4 +286,57 @@ fn day4_valid_passports() {
     for passport in parse_passports(content) {
         assert!(is_valid_passport(&passport));
     }
+}
+
+fn day5() -> Result<(), Box<dyn Error>> {
+    let filepath = "src/boardingpasses.input";
+    let content = fs::read_to_string(&filepath)?;
+    let max = content
+        .lines()
+        .filter_map(parse_boardingpass)
+        .map(|(id, _row, _coll)| id)
+        .max()
+        .expect("expect at least one entry");
+    println!("day 5 part 1: {}", max);
+    Ok(())
+}
+
+type DecodedPass = (usize, usize, usize);
+
+fn parse_boardingpass(pass: &str) -> Option<DecodedPass> {
+    if pass.len() == 10 {
+        let row = binpart(128, 'F', 'B', &pass[..7]);
+        let col = binpart(8, 'L', 'R', &pass[7..]);
+        let id = row * 8 + col;
+        Some((id, row, col))
+    } else {
+        None
+    }
+}
+
+#[test]
+fn day5_parse_boardingpass() {
+    assert_eq!((567, 70, 7), parse_boardingpass("BFFFBBFRRR").unwrap());
+    assert_eq!((119, 14, 7), parse_boardingpass("FFFBBBFRRR").unwrap());
+    assert_eq!((820, 102, 4), parse_boardingpass("BBFFBBFRLL").unwrap());
+}
+
+fn binpart(space: usize, lo: char, hi: char, instructions: &str) -> usize {
+    let mut a = 0;
+    let mut b = space;
+    for c in instructions.chars() {
+        if c == lo {
+            b /= 2;
+        } else if c == hi {
+            b /= 2;
+            a += b;
+        }
+    }
+    a
+}
+
+#[test]
+fn day5_binpart() {
+    assert_eq!(44, binpart(128, 'F', 'B', "FBFBBFF"));
+    assert_eq!(5, binpart(8, 'L', 'R', "RLR"));
 }
