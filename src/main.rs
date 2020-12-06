@@ -97,24 +97,63 @@ fn day2_2() {
 
 fn day3() -> Result<(), Box<dyn std::error::Error>> {
     let filepath = "src/forest.input";
-    let trees = day3_count_trees(&fs::read_to_string(&filepath)?);
+    let map = fs::read_to_string(&filepath)?.trim().to_string();
+    let trees = day3_count_trees(&map, 3, 1);
     println!("day 3 part 1: {}", trees);
+    let product: usize = [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)]
+        .iter()
+        .map(|(x, y)| day3_count_trees(&map, *x, *y))
+        .product();
+    println!("day 3 part 2: {}", product);
     Ok(())
 }
 
-fn day3_count_trees(input: &str) -> usize {
+fn day3_count_trees(input: &str, x_dir: usize, y_dir: usize) -> usize {
     let map: Vec<char> = input.chars().collect();
     let width = map.iter().position(|&c| c == '\n').unwrap();
     let height = map.len() / (width + 1);
-    (1..height)
-        .filter(|row| {
-            let col = (row * 3) % width;
-            map[row * (width + 1) + col] == '#'
+    let rows = height / y_dir;
+    // let mut map2 = map.clone();
+    // for index in 1..=rows {
+    //     let row = dbg!(index) * y_dir;
+    //     let col = dbg!(index * x_dir) % dbg!(width);
+    //     let pos = dbg!(row * (width + 1)) + dbg!(col);
+    //     let tree = map[pos] == '#';
+    //     map2[pos] = if tree { 'X' } else { 'O' };
+    // }
+    // println!("{}\n", map2.into_iter().collect::<String>());
+    (1..=rows)
+        .filter(|index| {
+            let row = index * y_dir;
+            let col = (index * x_dir) % width;
+            let pos = row * (width + 1) + col;
+            map[pos] == '#'
         })
         .count()
 }
 
 #[test]
 fn day3_1() {
-    assert_eq!(3, day3_count_trees("....\n...#\n##.#\n.#..\n#...\n"));
+    assert_eq!(3, day3_count_trees("....\n...#\n##.#\n.#..\n#...", 3, 1));
+    assert_eq!(1, day3_count_trees("....\n....\n....\n...#", 1, 1));
+}
+
+#[test]
+fn day3_2() {
+    let map = "..##.......
+#...#...#..
+.#....#..#.
+..#.#...#.#
+.#...##..#.
+..#.##.....
+.#.#.#....#
+.#........#
+#.##...#...
+#...##....#
+.#..#...#.#";
+    assert_eq!(2, day3_count_trees(&map, 1, 1));
+    assert_eq!(7, day3_count_trees(&map, 3, 1));
+    assert_eq!(3, day3_count_trees(&map, 5, 1));
+    assert_eq!(4, day3_count_trees(&map, 7, 1));
+    assert_eq!(2, day3_count_trees(&map, 1, 2));
 }
