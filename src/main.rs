@@ -1,3 +1,6 @@
+#![feature(str_split_once)]
+#![feature(or_patterns)]
+
 use regex::{self, Regex};
 use std::fs;
 
@@ -6,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     day1_2()?;
     day2()?;
     day3()?;
+    day4()?;
     Ok(())
 }
 
@@ -156,4 +160,129 @@ fn day3_2() {
     assert_eq!(3, day3_count_trees(&map, 5, 1));
     assert_eq!(4, day3_count_trees(&map, 7, 1));
     assert_eq!(2, day3_count_trees(&map, 1, 2));
+}
+
+fn day4() -> Result<(), Box<dyn std::error::Error>> {
+    let filepath = "src/passports.input";
+    let content = fs::read_to_string(&filepath)?;
+    let entries = parse_passports(&content);
+    println!(
+        "day 4 part 1: {}",
+        entries.iter().filter(|e| has_mandatory_fields(e)).count()
+    );
+    println!(
+        "day 4 part 2: {}",
+        entries.iter().filter(|e| is_valid_passport(e)).count()
+    );
+    Ok(())
+}
+
+fn parse_passports(content: &str) -> Vec<Vec<(&str, &str)>> {
+    content
+        .trim()
+        .split("\n\n")
+        .map(|entry| parse_passport(entry))
+        .collect()
+}
+
+fn parse_passport(entry: &str) -> Vec<(&str, &str)> {
+    entry
+        .split_whitespace()
+        .map(|kv| kv.split_once(':').expect("kv pair needs : separator"))
+        .collect::<Vec<_>>()
+}
+
+fn is_valid_passport(entry: &[(&str, &str)]) -> bool {
+    has_mandatory_fields(&entry) && entry.iter().all(field_is_valid)
+}
+
+fn field_is_valid(field: &(&str, &str)) -> bool {
+    match field {
+        // byr (Birth Year) - four digits; at least 1920 and at most 2002.
+        ("byr", v) => is_year(v, 1920, 2002),
+        // iyr (Issue Year) - four digits; at least 2010 and at most 2020.
+        ("iyr", v) => is_year(v, 2010, 2020),
+        // eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
+        ("eyr", v) => is_year(v, 2020, 2030),
+        // hgt (Height) - a number followed by either cm or in:
+        //     If cm, the number must be at least 150 and at most 193.
+        //     If in, the number must be at least 59 and at most 76.
+        ("hgt", v) => is_height(v, "cm", 150, 193) || is_height(v, "in", 59, 76),
+        // hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+        ("hcl", v) => is_colorcode(v),
+        // ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+        ("ecl", "amb" | "blu" | "brn" | "gry" | "grn" | "hzl" | "oth") => true,
+        ("ecl", _) => false,
+        // pid (Passport ID) - a nine-digit number, including leading zeroes.
+        ("pid", v) => v.len() == 9 && v.chars().all(char::is_numeric),
+        // cid (Country ID) - ignored, missing or not.
+        ("cid", _) => true,
+        _ => true,
+    }
+}
+
+fn has_mandatory_fields(entry: &[(&str, &str)]) -> bool {
+    ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"]
+        .iter()
+        .all(|mandatory| entry.iter().find(|(key, _)| mandatory == key).is_some())
+}
+
+fn is_year(s: &str, min: usize, max: usize) -> bool {
+    let n = s.parse::<usize>().expect("must be a number");
+    n >= min && n <= max && s.chars().all(char::is_numeric) && s.len() == 4
+}
+
+fn is_height(s: &str, unit: &str, min: usize, max: usize) -> bool {
+    if s.ends_with(unit) {
+        let digits = s.trim_end_matches(unit);
+        let n = digits.parse::<usize>().expect("must be a number");
+        n >= min && n <= max
+    } else {
+        false
+    }
+}
+
+fn is_colorcode(s: &str) -> bool {
+    s.starts_with("#") && s[1..].chars().all(|c| c.is_digit(16))
+}
+
+#[test]
+fn day4_invalid_passports() {
+    let content = "
+    eyr:1972 cid:100
+    hcl:#18171d ecl:amb hgt:170 pid:186cm iyr:2018 byr:1926
+
+    iyr:2019
+    hcl:#602927 eyr:1967 hgt:170cm
+    ecl:grn pid:012533040 byr:1946
+
+    hcl:dab227 iyr:2012
+    ecl:brn hgt:182cm pid:021572410 eyr:2020 byr:1992 cid:277
+
+    hgt:59cm ecl:zzz
+    eyr:2038 hcl:74454a iyr:2023
+    pid:3556412378 byr:2007";
+    for passport in parse_passports(content) {
+        assert!(!is_valid_passport(&passport));
+    }
+}
+
+#[test]
+fn day4_valid_passports() {
+    let content = "
+    pid:087499704 hgt:74in ecl:grn iyr:2012 eyr:2030 byr:1980
+    hcl:#623a2f
+
+    eyr:2029 ecl:blu cid:129 byr:1989
+    iyr:2014 pid:896056539 hcl:#a97842 hgt:165cm
+
+    hcl:#888785
+    hgt:164cm byr:2001 iyr:2015 cid:88
+    pid:545766238 ecl:hzl
+    eyr:2022
+
+    iyr:2010 hgt:158cm hcl:#b6652a ecl:blu byr:1944 eyr:2021 pid:093154719";
+    for passport in parse_passports(content) {
+        assert!(is_valid_passport(&passport));
+    }
 }
