@@ -1,5 +1,6 @@
 #![feature(str_split_once)]
 #![feature(or_patterns)]
+#![feature(iterator_fold_self)]
 
 use regex::{self, Regex};
 use std::{collections::HashSet, error::Error, fs};
@@ -354,15 +355,31 @@ fn day5_binpart() {
 fn day6() -> Result<(), Box<dyn Error>> {
     let filepath = "src/customs.input";
     let content = fs::read_to_string(&filepath)?;
-    let sum: usize = content.split("\n\n").map(count_yes).sum();
+    let sum: usize = content.split("\n\n").map(count_any_yes).sum();
     println!("day 6 part 1: {}", sum);
+
+    let sum: usize = content.split("\n\n").map(count_all_yes).sum();
+    println!("day 6 part 2: {}", sum);
     Ok(())
 }
 
-fn count_yes(group: &str) -> usize {
+fn count_any_yes(group: &str) -> usize {
     group
         .chars()
         .filter(char::is_ascii_lowercase)
         .collect::<HashSet<_>>()
+        .len()
+}
+
+fn count_all_yes(group: &str) -> usize {
+    group
+        .lines()
+        .map(|l| {
+            l.chars()
+                .filter(char::is_ascii_lowercase)
+                .collect::<HashSet<_>>()
+        })
+        .fold_first(|a, b| a.intersection(&b).map(Clone::clone).collect())
+        .unwrap()
         .len()
 }
