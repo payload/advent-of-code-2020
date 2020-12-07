@@ -3,7 +3,7 @@
 #![feature(iterator_fold_self)]
 
 use regex::{self, Regex};
-use std::{collections::HashSet, error::Error, fs};
+use std::{error::Error, fs};
 
 fn main() -> Result<(), Box<dyn Error>> {
     day1_1()?;
@@ -355,31 +355,20 @@ fn day5_binpart() {
 fn day6() -> Result<(), Box<dyn Error>> {
     let filepath = "src/customs.input";
     let content = fs::read_to_string(&filepath)?;
-    let sum: usize = content.split("\n\n").map(count_any_yes).sum();
+
+    let fold = |s: &str| {
+        s.bytes()
+            .filter(u8::is_ascii_lowercase)
+            .fold(0usize, |a, b| a | 1 << b - b'a')
+    };
+
+    let sum: u32 = content.split("\n\n").map(|e| fold(e).count_ones()).sum();
     println!("day 6 part 1: {}", sum);
 
-    let sum: usize = content.split("\n\n").map(count_all_yes).sum();
+    let sum: u32 = content
+        .split("\n\n")
+        .map(|e| e.lines().fold(!0usize, |a, l| a & fold(l)).count_ones())
+        .sum();
     println!("day 6 part 2: {}", sum);
     Ok(())
-}
-
-fn count_any_yes(group: &str) -> usize {
-    group
-        .chars()
-        .filter(char::is_ascii_lowercase)
-        .collect::<HashSet<_>>()
-        .len()
-}
-
-fn count_all_yes(group: &str) -> usize {
-    group
-        .lines()
-        .map(|l| {
-            l.chars()
-                .filter(char::is_ascii_lowercase)
-                .collect::<HashSet<_>>()
-        })
-        .fold_first(|a, b| a.intersection(&b).map(Clone::clone).collect())
-        .unwrap()
-        .len()
 }
